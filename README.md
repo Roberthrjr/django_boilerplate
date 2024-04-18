@@ -52,3 +52,9 @@ config(
 python manage.py makemigrations ecommerce
 python manage.py migrate
 ```
+
+# Creacion del superusuario
+
+```bash
+python manage.py createsuperuser
+```
