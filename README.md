@@ -7,6 +7,7 @@ pip install djangorestframework
 pip install cloudinary
 pip install python-dotenv
 pip install psycopg2-binary
+pip install drf_yasg
 ```
 
 ## Configuracion
@@ -24,6 +25,7 @@ INSTALLED_APPS = [
     'ecommerce',
     'rest_framework',
     'cloudinary',
+    'drf_yasg',
 ]
 
 DATABASES = {
