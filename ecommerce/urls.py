@@ -1,4 +1,6 @@
+# Importamos la funcion path del modulo django.urls para definir las rutas
 from django.urls import path
+# Importamos las vistas del directorio actual
 from .views import (
     ProductView,
     ProductCreateView,
@@ -11,6 +13,7 @@ from .views import (
     SaleDeleteView
 )
 
+# Definimos las rutas
 urlpatterns = [
     path('products/all', ProductView.as_view()),
     path('products/create', ProductCreateView.as_view()),

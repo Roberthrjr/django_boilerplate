@@ -3,9 +3,11 @@ from rest_framework import generics, status
 # Importamos la clase Response de DRF
 from rest_framework.response import Response
 # Importamos el serializer
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel
 # Importamos la libreria cloudinary
 from cloudinary.uploader import upload
+# Importamos el modelo User
+from django.contrib.auth.models import User
 
 # Creamos la vista de productos para obtener todos los productos
 class ProductView(generics.ListAPIView):
@@ -73,15 +75,33 @@ class SaleView(generics.ListAPIView):
     
 # Creamos la vista de ventas para crear una venta
 class SaleCreateView(generics.CreateAPIView):
+    # Obtenemos el queryset
     queryset = SaleModel.objects.all()
+    # Obtenemos el serializer
     serializer_class = SaleSerializer
     # Creamos el metodo create
     def create(self, request, *args, **kwargs):
         try:
             # Obtenemos los datos
             data = request.data
+            # Verificamos si los datos son validos
+            serializer = self.serializer_class(data=data)
+            serializer.is_valid(raise_exception=True)
+            # Guardamos la venta
+            # serializer.save()
+            
+            user = User.objects.get(id = data['user_id'])
+            
+            # Guardamos la venta
+            sale = SaleModel.objects.create(
+                user_id = user, 
+                total = data['total']
+                )
+            # Guardamos los detalles de la venta
+            sale.save()
+                        
             # Verificamos si hay stock suficiente
-            for item in data['detail']:
+            for item in data['details']:
                 # Obtenemos el id del producto
                 productId = item['product_id']
                 # Obtenemos la cantidad
@@ -92,8 +112,24 @@ class SaleCreateView(generics.CreateAPIView):
                 if product.stock < quantity:
                     # Retornamos la respuesta
                     raise Exception(f'No hay stock suficiente para el producto {product.name}')
-            # Creamos la venta
-            return Response(data, status = status.HTTP_201_CREATED)
+                # Actualizamos el stock
+                product.stock -= quantity
+                # Guardamos el producto
+                product.save()
+                # Creamos el detalle de la venta
+                saleDetail = SaleDetailModel.objects.create(
+                    product_id = product, 
+                    sale_id = sale, 
+                    quantity = quantity, 
+                    price = item['price'], 
+                    subtotal = item['subtotal']
+                    )
+                # Guardamos el detalle de la venta
+                saleDetail.save()
+            
+            
+            # Retornamos la respuesta            
+            return Response(serializer.data, status = status.HTTP_200_OK)
         
         except Exception as e:
             return Response({'message': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
