@@ -2,6 +2,7 @@
 from django.urls import path
 # Importamos las vistas del directorio actual
 from .views import (
+    RegisterView,
     ProductView,
     ProductCreateView,
     ProductUploadImageView,
@@ -15,6 +16,7 @@ from .views import (
 
 # Definimos las rutas
 urlpatterns = [
+    path('user/register', RegisterView.as_view()),
     path('products/all', ProductView.as_view()),
     path('products/create', ProductCreateView.as_view()),
     path('products/upload-image', ProductUploadImageView.as_view()),

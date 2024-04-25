@@ -1,9 +1,34 @@
 # Importamos el modulo models para definir modelos de la base de datos
 from django.db import models
-# Importamos el modulo User para definir el modelo de usuario
-from django.contrib.auth.models import User
 # Importamos el modulo cloudinary para definir el modelo de imagen
 from cloudinary.models import CloudinaryField
+# Importamos el modulo AbstractBaseUser para definir el modelo de usuario
+from django.contrib.auth.models import AbstractBaseUser
+# Importamos el modulo UserManager para definir el modelo de usuario
+from .manager import UserManager
+
+# Creamos el modelo de usuario
+class MyUser(AbstractBaseUser):
+    # Definimos los campos del modelo
+    email = models.EmailField(
+        verbose_name='email address',
+        max_length=255,
+        unique=True,
+    )
+    name = models.CharField(max_length=255)
+    document_type = models.CharField(max_length=255)
+    document_number = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=255)
+    is_admin = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name', 'document_type', 'document_number']
+
+    def __str__(self):
+        return self.email
 
 # Creamos el modelo de producto
 class ProductModel(models.Model):
@@ -31,7 +56,7 @@ class SaleModel(models.Model):
     # Definimos los campos del modelo
     id = models.AutoField(primary_key=True)
     total = models.FloatField()
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_id = models.ForeignKey(MyUser, on_delete=models.CASCADE)
 
     # Definimos la tabla de la base de datos
     class Meta:

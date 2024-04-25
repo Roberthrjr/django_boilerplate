@@ -2,14 +2,57 @@
 from rest_framework import generics, status
 # Importamos la clase Response de DRF
 from rest_framework.response import Response
+# Importamos el modelo MyUser
+from ecommerce.models import MyUser
 # Importamos el serializer
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel, SaleCreateSerializer
+from .serializers import (
+    ProductSerializer, 
+    ProductModel, 
+    ProductUpdateSerializer, 
+    SaleSerializer, 
+    SaleModel, 
+    SaleDetailModel, 
+    SaleCreateSerializer,
+    UserCreateSerializer
+    )
 # Importamos la libreria cloudinary
 from cloudinary.uploader import upload
 # Importamos el modelo User
 from django.contrib.auth.models import User
 # Importamos el metodo transaction
 from django.db import transaction
+
+# Creamos la vista de registro para crear un nuevo usuario
+class RegisterView(generics.CreateAPIView):
+    # Definimos el queryset
+    queryset = MyUser.objects.all()
+    # Definimos el serializer
+    serializer_class = UserCreateSerializer
+    
+    # Creamos el metodo post
+    def post(self, request, *args, **kwargs):
+        
+        try:
+            # Obtenemos el email
+            email = request.data.get['email']
+            # Filtramos el usuario por el email
+            user = MyUser.objects.filter(email=email).first()
+            # Verificamos si el usuario ya existe
+            if user:
+                # Retornamos la respuesta
+                return Response({'message': 'El usuario ya existe'}, status = status.HTTP_400_BAD_REQUEST)
+            # Creamos el usuario
+            serializer = self.get_serializer(data=request.data)
+            # Validamos el serializer
+            serializer.is_valid(raise_exception=True)
+            # Guardamos el usuario
+            serializer.save()
+            # Retornamos la respuesta
+            response = self.serializer_class(serializer).data
+            return Response(response, status = status.HTTP_201_CREATED)
+                    
+        except Exception as e:
+            return Response({'message': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Creamos la vista de productos para obtener todos los productos
 class ProductView(generics.ListAPIView):
@@ -94,7 +137,7 @@ class SaleCreateView(generics.CreateAPIView):
             # Guardamos la venta
             # serializer.save()
             
-            user = User.objects.get(id = data['user_id'])
+            user = MyUser.objects.get(id = data['user_id'])
             
             # Guardamos la venta
             sale = SaleModel.objects.create(

@@ -129,3 +129,5 @@ config(
     api_key = environ.get('CLOUDINARY_API_KEY'),
     api_secret = environ.get('CLOUDINARY_API_SECRET'),
 )
+
+AUTH_USER_MODEL = 'ecommerce.MyUser'

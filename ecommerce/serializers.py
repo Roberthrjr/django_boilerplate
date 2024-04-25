@@ -1,7 +1,40 @@
 # Importamos serializers de la biblioteca de rest_framework
 from rest_framework import serializers
 # Importamos modelos
-from .models import ProductModel, SaleDetailModel, SaleModel
+from .models import ProductModel, SaleDetailModel, SaleModel, MyUser
+
+# Definimos el serializer para crear un usuario
+class UserCreateSerializer(serializers.ModelSerializer):
+    # Se crea el campo password y se especifica que es solo para escritura.
+    password = serializers.CharField(write_only=True)
+    
+    # Se crea la clase Meta
+    class Meta:
+        # Se define el modelo y los campos a serializar de la tabla User.
+        model = MyUser
+        fields = '__all__'
+        
+    # Se sobreescribe el metodo save para crear un usuario.
+    def save(self):
+        # Se obtienen los datos validados
+        name = self.validated_data['name']
+        email = self.validated_data['email']
+        document_type = self.validated_data['document_type']
+        document_number = self.validated_data['document_number']
+        password = self.validated_data['password']
+        
+        # Se crea un nuevo usuario con los datos validados
+        user = MyUser(
+            name=name,
+            email=email,
+            document_type=document_type,
+            document_number=document_number
+        )
+        user.set_password(password)
+        # Se guarda el usuario en la base de datos
+        user.save()
+        # Se retorna el usuario creado
+        return user
 
 # Se crea la clase ProductSerializer que hereda de ModelSerializer y se define el modelo y los campos a serializar de la tabla ProductModel.
 class ProductSerializer(serializers.ModelSerializer):
