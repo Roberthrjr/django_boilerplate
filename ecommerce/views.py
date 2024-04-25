@@ -3,11 +3,13 @@ from rest_framework import generics, status
 # Importamos la clase Response de DRF
 from rest_framework.response import Response
 # Importamos el serializer
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel, SaleCreateSerializer
 # Importamos la libreria cloudinary
 from cloudinary.uploader import upload
 # Importamos el modelo User
 from django.contrib.auth.models import User
+# Importamos el metodo transaction
+from django.db import transaction
 
 # Creamos la vista de productos para obtener todos los productos
 class ProductView(generics.ListAPIView):
@@ -71,14 +73,16 @@ class ProductUploadImageView(generics.GenericAPIView):
 # Creamos la vista de ventas para obtener todas las ventas
 class SaleView(generics.ListAPIView):
     queryset = SaleModel.objects.all()
-    serializer_class = SaleSerializer    
+    serializer_class = SaleSerializer
     
 # Creamos la vista de ventas para crear una venta
 class SaleCreateView(generics.CreateAPIView):
     # Obtenemos el queryset
     queryset = SaleModel.objects.all()
     # Obtenemos el serializer
-    serializer_class = SaleSerializer
+    serializer_class = SaleCreateSerializer
+    
+    @transaction.atomic
     # Creamos el metodo create
     def create(self, request, *args, **kwargs):
         try:

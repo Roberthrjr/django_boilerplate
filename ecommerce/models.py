@@ -49,7 +49,7 @@ class SaleDetailModel(models.Model):
     price = models.FloatField()
     subtotal = models.FloatField()
     product_id = models.ForeignKey(ProductModel, on_delete=models.CASCADE)
-    sale_id = models.ForeignKey(SaleModel, on_delete=models.CASCADE)
+    sale_id = models.ForeignKey(SaleModel, on_delete=models.CASCADE, related_name='saleDetails')
 
     # Definimos la tabla de la base de datos
     class Meta:

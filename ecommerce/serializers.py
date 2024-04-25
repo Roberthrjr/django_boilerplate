@@ -33,16 +33,26 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         model = ProductModel
         fields = '__all__'
 
-# Se crea la clase SaleDetailSerializer que hereda de ModelSerializer y se define el modelo y los campos a serializar de la tabla SaleDetailModel.
+# Serializador para listar
 class SaleDetailSerializer(serializers.ModelSerializer):
-    sale_id = serializers.IntegerField(read_only=True)
     class Meta:
         model = SaleDetailModel
         fields = '__all__'    
         
-# Se crea la clase SaleSerializer que hereda de ModelSerializer y se define el modelo y los campos a serializar de la tabla SaleModel.
 class SaleSerializer(serializers.ModelSerializer):
-    details = SaleDetailSerializer(many=True)
+    details = SaleDetailSerializer(source='saleDetails', many=True)
+    class Meta:
+        model = SaleModel
+        fields = '__all__'
+
+#Serializador para crear ventas
+class SaleDetailCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SaleDetailModel
+        exclude = ['sale_id']
+
+class SaleCreateSerializer(serializers.ModelSerializer):
+    details = SaleDetailCreateSerializer(source='saleDetails',many=True)
     class Meta:
         model = SaleModel
         fields = '__all__'
