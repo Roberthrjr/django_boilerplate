@@ -10,22 +10,18 @@ from .manager import UserManager
 # Creamos el modelo de usuario
 class MyUser(AbstractBaseUser):
     # Definimos los campos del modelo
-    email = models.EmailField(
-        verbose_name='email address',
-        max_length=255,
-        unique=True,
-    )
+    email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     document_type = models.CharField(max_length=255)
     document_number = models.CharField(max_length=255, unique=True)
-    status = models.CharField(max_length=255)
+    status = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['name', 'document_type', 'document_number']
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.email

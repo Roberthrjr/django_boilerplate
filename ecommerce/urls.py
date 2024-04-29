@@ -3,6 +3,7 @@ from django.urls import path
 # Importamos las vistas del directorio actual
 from .views import (
     RegisterView,
+    LoginView,
     ProductView,
     ProductCreateView,
     ProductUploadImageView,
@@ -11,12 +12,14 @@ from .views import (
     SaleCreateView,
     SaleView,
     SaleUpdateView,
-    SaleDeleteView
+    SaleDeleteView,
+    CreateInvoiceView
 )
 
 # Definimos las rutas
 urlpatterns = [
     path('user/register', RegisterView.as_view()),
+    path('user/login', LoginView.as_view()),
     path('products/all', ProductView.as_view()),
     path('products/create', ProductCreateView.as_view()),
     path('products/upload-image', ProductUploadImageView.as_view()),
@@ -26,4 +29,5 @@ urlpatterns = [
     path('sales/create', SaleCreateView.as_view()),
     path('sales/update/<int:pk>', SaleUpdateView.as_view()),
     path('sales/delete/<int:pk>', SaleDeleteView.as_view()),
+    path('invoice/create', CreateInvoiceView.as_view())
 ]

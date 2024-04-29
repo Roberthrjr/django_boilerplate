@@ -13,7 +13,8 @@ from .serializers import (
     SaleModel, 
     SaleDetailModel, 
     SaleCreateSerializer,
-    UserCreateSerializer
+    UserCreateSerializer,
+    MyTokenObtainPairSerializer
     )
 # Importamos la libreria cloudinary
 from cloudinary.uploader import upload
@@ -21,6 +22,16 @@ from cloudinary.uploader import upload
 from django.contrib.auth.models import User
 # Importamos el metodo transaction
 from django.db import transaction
+# Importamos la clase TokenO de DRF
+from rest_framework_simplejwt.views import TokenObtainPairView
+# Importamos la clase environ
+from os import environ
+# Importamos la libreria requests
+import requests
+# Importamos la libreria datetime
+from datetime import datetime
+# Importamos la libreria pprint
+from pprint import pprint
 
 # Creamos la vista de registro para crear un nuevo usuario
 class RegisterView(generics.CreateAPIView):
@@ -34,7 +45,7 @@ class RegisterView(generics.CreateAPIView):
         
         try:
             # Obtenemos el email
-            email = request.data.get['email']
+            email = request.data.get('email')
             # Filtramos el usuario por el email
             user = MyUser.objects.filter(email=email).first()
             # Verificamos si el usuario ya existe
@@ -46,13 +57,20 @@ class RegisterView(generics.CreateAPIView):
             # Validamos el serializer
             serializer.is_valid(raise_exception=True)
             # Guardamos el usuario
-            serializer.save()
+            newUser = serializer.save()
             # Retornamos la respuesta
-            response = self.serializer_class(serializer).data
+            response = self.serializer_class(newUser).data
             return Response(response, status = status.HTTP_201_CREATED)
                     
         except Exception as e:
-            return Response({'message': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Creamos la vista de login para iniciar sesion
+class LoginView(TokenObtainPairView):
+    # Definimos el queryset
+    queryset = MyUser.objects.all()
+    # Definimos el serializer
+    serializer_class = MyTokenObtainPairSerializer
 
 # Creamos la vista de productos para obtener todos los productos
 class ProductView(generics.ListAPIView):
@@ -87,10 +105,11 @@ class ProductDeleteView(generics.DestroyAPIView):
             return Response({'message': 'Producto eliminado correctamente'}, status = status.HTTP_200_OK)
         except Exception as e:
             # Retornamos la respuesta
-            return Response({'message': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Creamos la vista de productos para subir una imagen
 class ProductUploadImageView(generics.GenericAPIView):
+    serializer_class = ProductSerializer
     # Creamos el metodo post 
     def post(self, request, *args, **kwargs):
         # Verificamos si el usuario esta autenticado
@@ -103,15 +122,15 @@ class ProductUploadImageView(generics.GenericAPIView):
             # Subimos la imagen
             uploadedImage = upload(imageFile)
             # Obtenemos el nombre del archivo
-            imageName = uploadedImage['url'].split('/')[-1]
+            imageName = uploadedImage['secure_url'].split('/')[-1]
             # Obtenemos la ruta de la imagen
             imagePath = f'{uploadedImage["resource_type"]}/{uploadedImage["type"]}/v{uploadedImage["version"]}/{imageName}'
             # Retornamos la respuesta
-            return Response({'url': imagePath})
+            return Response({'url': imagePath}, status.HTTP_200_OK)
         
         except Exception as e:
             # Retornamos la respuesta
-            return Response({'message': str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'errors': str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Creamos la vista de ventas para obtener todas las ventas
 class SaleView(generics.ListAPIView):
@@ -179,7 +198,7 @@ class SaleCreateView(generics.CreateAPIView):
             return Response(serializer.data, status = status.HTTP_200_OK)
         
         except Exception as e:
-            return Response({'message': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Creamos la vista de ventas para actualizar una venta
 class SaleUpdateView(generics.UpdateAPIView):
@@ -190,3 +209,66 @@ class SaleUpdateView(generics.UpdateAPIView):
 class SaleDeleteView(generics.DestroyAPIView):
     queryset = SaleModel.objects.all()
     serializer_class = SaleSerializer
+
+# Creamos la vista de ventas para crear una factura
+class CreateInvoiceView(generics.GenericAPIView):
+    serializer_class = SaleSerializer
+    
+    def post(self, request):
+        try:
+            # Extraer la url de las variables de entorno
+            url = environ.get('NUBEFACT_URL')
+            token = environ.get('NUBEFACT_TOKEN')
+            
+            # Datos de la factura
+            invoiceData = {
+                'operacion': 'generar_comprobante',
+                'tipo_de_comprobante': 2,
+                'serie': 'BBB1',
+                'numero': 1,
+                'sunat_transaction': 1,
+                'cliente_tipo_de_documento': 1,
+                'cliente_numero_de_documento': '73201471',
+                'cliente_denominacion': 'EMPRESA DE PRUEBA',
+                'cliente_direccion': 'AV. LARCO 1234',
+                'cliente_email': 'email@email.com',
+                'fecha_de_emision': datetime.now().strftime('%d-%m-%Y'),
+                'moneda': 1,
+                'porcentaje_de_igv': 18.0,
+                'total_gravada': 100,
+                'total_igv': 18,
+                'total': 118,
+                'detraccion': False,
+                'enviar_automaticamente_a_la_sunat': True,
+                'enviar_automaticamente_al_cliente': True,
+                'items': [
+                    {
+                        'unidad_de_medida': 'NIU',                    
+                        'codigo': 'P001',
+                        'codigo_producto_sunat': '10000000',
+                        'descripcion': 'ZAPATILLAS NIKE',
+                        'cantidad': 1,
+                        'valor_unitario': 100,
+                        'precio_unitario': 118,
+                        'subtotal': 100,
+                        'tipo_de_igv': 1,
+                        'igv': 18,
+                        'total': 118,
+                        'anticipo_regularizacion': False
+                    }
+                ]
+            }
+            
+            # Realizar la peticion
+            nubeFactResponse = requests.post(url=url, headers={'Authorization': f'Bearer {token}'}, json=invoiceData)
+            
+            pprint(nubeFactResponse.json())
+            print(nubeFactResponse.status_code)
+            
+            # Retornar la respuesta
+            return Response({
+                'message': 'Factura generada correctamente',
+            }, status = status.HTTP_200_OK) 
+            
+        except Exception as e:
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)

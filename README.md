@@ -8,6 +8,7 @@ pip install cloudinary
 pip install python-dotenv
 pip install psycopg2-binary
 pip install drf_yasg
+pip install requests
 ```
 
 ## Configuracion

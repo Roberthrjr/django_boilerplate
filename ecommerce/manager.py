@@ -4,7 +4,7 @@ from django.contrib.auth.models import BaseUserManager
 # Se define una clase que hereda de BaseUserManager
 class UserManager(BaseUserManager):
     # Creamos un metodo para crear un usuario
-    def create_user(self, email, password=None):
+    def create_user(self, email, password, **extra_fields):
         # Verificamos si se proporciono un email
         if not email:
             # Generamos una excepcion si no se proporciono un email
@@ -13,6 +13,7 @@ class UserManager(BaseUserManager):
         # Creamos un nuevo usuario con el email normalizado
         user = self.model(
             email = self.normalize_email(email),
+            **extra_fields
         )
         # Establecemos la contraseña del usuario
         user.set_password(password)
@@ -22,7 +23,7 @@ class UserManager(BaseUserManager):
         return user
     
     # Creamos un metodo para crear un usuario administrador
-    def create_superuser(self, email, password=None):
+    def create_superuser(self, email, password):
         # Creamos un nuevo usuario con el email normalizado
         user = self.create_user(
             email = self.normalize_email(email),

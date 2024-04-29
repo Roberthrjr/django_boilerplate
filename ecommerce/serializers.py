@@ -2,17 +2,21 @@
 from rest_framework import serializers
 # Importamos modelos
 from .models import ProductModel, SaleDetailModel, SaleModel, MyUser
+# Importamos el modelo de token
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 # Definimos el serializer para crear un usuario
 class UserCreateSerializer(serializers.ModelSerializer):
     # Se crea el campo password y se especifica que es solo para escritura.
     password = serializers.CharField(write_only=True)
     
+    
     # Se crea la clase Meta
     class Meta:
         # Se define el modelo y los campos a serializar de la tabla User.
         model = MyUser
-        fields = '__all__'
+        exclude = ['last_login']
+        
         
     # Se sobreescribe el metodo save para crear un usuario.
     def save(self):
@@ -35,6 +39,18 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user.save()
         # Se retorna el usuario creado
         return user
+
+# Se crea la clase MyTokenObtainPairSerializer que hereda de TokenObtainPairSerializer.
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    # Se sobreescribe el metodo get_token para agregar los campos customizados.
+    def get_token(cls, user):
+        # Se llama al metodo get_token de la clase padre.
+        token = super().get_token(user)
+        # Agregamos los campos customizados
+        token['email'] = user.email
+        # Se retorna el token
+        return token
 
 # Se crea la clase ProductSerializer que hereda de ModelSerializer y se define el modelo y los campos a serializar de la tabla ProductModel.
 class ProductSerializer(serializers.ModelSerializer):
