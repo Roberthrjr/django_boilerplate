@@ -18,7 +18,7 @@ SECRET_KEY = 'django-insecure--q^mdup^!6v1)5ubfw!hc28gz76so)xso!iswi2__%j4(90vvs
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -33,12 +33,14 @@ INSTALLED_APPS = [
     'drf_yasg',
     'ecommerce',
     'rest_framework',
+    'corsheaders',
     'cloudinary',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -137,3 +139,9 @@ config(
 )
 
 AUTH_USER_MODEL = 'ecommerce.MyUser'
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    'https://de8f-2803-9810-61cc-b910-491e-ce45-db59-518c.ngrok-free.app',
+]

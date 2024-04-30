@@ -1,7 +1,11 @@
 # Importamos la clase generics de DRF
 from rest_framework import generics, status
+# Importamos la clase APIView de DRF
+from rest_framework.views import APIView 
 # Importamos la clase Response de DRF
 from rest_framework.response import Response
+# Importamos la clase Request de DRF
+from rest_framework.request import Request
 # Importamos el modelo MyUser
 from ecommerce.models import MyUser
 # Importamos el serializer
@@ -32,6 +36,8 @@ import requests
 from datetime import datetime
 # Importamos la libreria pprint
 from pprint import pprint
+# Importamos la libreria mercadopago
+import mercadopago
 
 # Creamos la vista de registro para crear un nuevo usuario
 class RegisterView(generics.CreateAPIView):
@@ -165,6 +171,9 @@ class SaleCreateView(generics.CreateAPIView):
                 )
             # Guardamos los detalles de la venta
             sale.save()
+            
+           
+            items = []
                         
             # Verificamos si hay stock suficiente
             for item in data['details']:
@@ -192,12 +201,74 @@ class SaleCreateView(generics.CreateAPIView):
                     )
                 # Guardamos el detalle de la venta
                 saleDetail.save()
+                
+                descripcion = product.name
+                valor_unitario = product.price
+                cantidad = quantity
+                igv = item['subtotal'] * 0.18
+                print(igv)
+                precio_unitario = (item['price']) + (igv/cantidad)
+                print(precio_unitario)
+                total = data['total']
+                
+                items.append({
+                    'unidad_de_medida': 'NIU',                    
+                    'codigo': 'P001',
+                    'codigo_producto_sunat': '10000000',
+                    'descripcion': descripcion,
+                    'cantidad': cantidad,
+                    'valor_unitario': valor_unitario,
+                    'precio_unitario': precio_unitario,
+                    'subtotal': item['subtotal'],
+                    'tipo_de_igv': 1,
+                    'igv': 18,
+                    'total': total,
+                    'anticipo_regularizacion': False
+                })
             
+            body = {
+                'operacion': 'generar_comprobante',
+                'tipo_de_comprobante': 2,
+                'serie': 'BBB1',
+                'numero': 1,
+                'sunat_transaction': 1,
+                'cliente_tipo_de_documento': 1,
+                'cliente_numero_de_documento': '73201471',
+                'cliente_denominacion': 'EMPRESA DE PRUEBA',
+                'cliente_direccion': 'AV. LARCO 1234',
+                'cliente_email': 'email@email.com',
+                'fecha_de_emision': datetime.now().strftime('%d-%m-%Y'),
+                'moneda': 1,
+                'porcentaje_de_igv': 18.0,
+                'total_gravada': item['subtotal'],
+                'total_igv': igv,
+                'total': total,
+                'detraccion': False,
+                'enviar_automaticamente_a_la_sunat': True,
+                'enviar_automaticamente_al_cliente': True,
+                'items': items
+            }
+            
+            # Generamos la factura
+            nubeFactResponse = requests.post(
+                url=environ.get('NUBEFACT_URL'), 
+                headers={
+                    'Authorization': f'Bearer {environ.get("NUBEFACT_TOKEN")}'
+                    }, 
+                json=body
+            )
+            
+            # Verificamos si la respuesta es correcta
+            json = nubeFactResponse.json()
+            if nubeFactResponse.status_code != 200:
+                raise Exception(json['errors'])
             
             # Retornamos la respuesta            
             return Response(serializer.data, status = status.HTTP_200_OK)
         
         except Exception as e:
+            # Deshacemos la transaccion
+            transaction.set_rollback(True)
             return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Creamos la vista de ventas para actualizar una venta
@@ -260,15 +331,104 @@ class CreateInvoiceView(generics.GenericAPIView):
             }
             
             # Realizar la peticion
+            # nubeFactResponse = requests.post(url=url, headers={'Authorization': f'Bearer {token}'}, json=invoiceData)
             nubeFactResponse = requests.post(url=url, headers={'Authorization': f'Bearer {token}'}, json=invoiceData)
             
-            pprint(nubeFactResponse.json())
-            print(nubeFactResponse.status_code)
+            # Obtener el json de la respuesta
+            json = nubeFactResponse.json()
+            
+            # Verificar si la respuesta es correcta
+            if nubeFactResponse.status_code != 200:
+                raise Exception(json['errors'])
             
             # Retornar la respuesta
             return Response({
-                'message': 'Factura generada correctamente',
+                'message': 'Comprobante generado correctamente',
+                'data': json
             }, status = status.HTTP_200_OK) 
             
         except Exception as e:
+            # Deshacemos la transaccion
+            transaction.set_rollback(True)
             return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+# Creamos la vista de ventas para obtener una factura
+class GetInvoiceView(APIView):
+    def get(self, request, tipo_de_comprobante: int, serie: str, numero: int):
+        try:
+            body = {
+                    'operacion': 'consultar_comprobante',
+                    'tipo_de_comprobante': tipo_de_comprobante,
+                    'serie': serie,
+                    'numero': numero
+                }
+            # Realizar la peticion
+            nubeFactResponse = requests.post(
+                url = environ.get('NUBEFACT_URL'),
+                headers = {'Authorization': f'Bearer {environ.get("NUBEFACT_TOKEN")}'},
+                json = body
+            )
+            
+            # Obtener el json de la respuesta
+            json = nubeFactResponse.json()
+            
+            # Verificar si la respuesta es correcta
+            if nubeFactResponse.status_code != 200:
+                raise Exception(json['errors'])
+            
+            # Retornar la respuesta            
+            return Response({
+                'message': 'Comprobante consultado correctamente',
+                'data': json
+            }, status = status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Creamos la vista de ventas para crear un pago
+class CreatePaymentView(APIView):
+    def post(self, request):
+        try:
+            # Creamos el objeto mercadopago
+            mp = mercadopago.SDK(environ.get('MERCADOPAGO_ACCESS_TOKEN'))
+            
+            # Creamos el objeto preference
+            preference = {
+                "items": [
+                    {
+                        "id": "123",
+                        "title": "Zapatillas Adidas",
+                        "quantity": 1,
+                        "currency_id": "MXN",
+                        "unit_price": 100
+                    }
+                ],
+                'notification_url': 'http://de8f-2803-9810-61cc-b910-491e-ce45-db59-518c.ngrok-free.app/api/payment/notification'
+            }
+            
+            # Creamos la preferencia
+            preferenceResponse = mp.preference().create(preference)
+            
+            if preferenceResponse['status'] != 201:
+                return Response({'errors': preferenceResponse['response']['message']}, status = status.HTTP_400_BAD_REQUEST)
+            
+            # Retornamos la respuesta
+            return Response({
+                'message': 'Pago generado correctamente',
+                'data': preferenceResponse['response']
+                }, status = status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'errors': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Creamos la vista de ventas para notificar un pago    
+class NotificationPaymentView(APIView):
+    def post(self, request: Request):
+        print(request.data)
+        print(request.query_params)
+        
+        
+        
+        return Response({'message': 'Ok'}, status = status.HTTP_200_OK)
+
+        

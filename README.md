@@ -9,6 +9,8 @@ pip install python-dotenv
 pip install psycopg2-binary
 pip install drf_yasg
 pip install requests
+pip install mercadopago
+pip install django-cors-headers
 ```
 
 ## Configuracion

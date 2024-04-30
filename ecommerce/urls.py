@@ -13,7 +13,10 @@ from .views import (
     SaleView,
     SaleUpdateView,
     SaleDeleteView,
-    CreateInvoiceView
+    CreateInvoiceView,
+    GetInvoiceView,
+    CreatePaymentView,
+    NotificationPaymentView
 )
 
 # Definimos las rutas
@@ -29,5 +32,8 @@ urlpatterns = [
     path('sales/create', SaleCreateView.as_view()),
     path('sales/update/<int:pk>', SaleUpdateView.as_view()),
     path('sales/delete/<int:pk>', SaleDeleteView.as_view()),
-    path('invoice/create', CreateInvoiceView.as_view())
+    path('invoice/create', CreateInvoiceView.as_view()),
+    path('invoice/get/<int:tipo_de_comprobante>/<str:serie>/<int:numero>', GetInvoiceView.as_view()),
+    path('payment/create', CreatePaymentView.as_view()),
+    path('payment/notification', NotificationPaymentView.as_view())
 ]
